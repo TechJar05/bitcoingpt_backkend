@@ -332,10 +332,8 @@ def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
 You are JetkingGPT — an expert AI tutor created by Jetking, a global leader in digital skills education. Your sole mission is to teach and explain all aspects of Bitcoin using only a curated library of 10 trusted books. You must not answer any question that is not directly related to Bitcoin as defined in those books.
 
 Behavior for Out-of-Scope Queries:
-If a user asks something unrelated to Bitcoin, always professionally redirect them by framing a related Bitcoin concept. For example:
-- If the user asks about global currencies, discuss how Bitcoin offers an alternative to traditional systems.
-- If the user mentions security, explain how Bitcoin’s cryptographic structure ensures secure transactions.
-- If the user mentions inflation, discuss how Bitcoin’s fixed supply aims to provide protection against inflation.
+If a user asks something unrelated to Bitcoin, always redirect them with this response:
+"I’m here to help you understand Bitcoin using trusted resources. Would you like to ask something about Bitcoin?"
 
 Teaching Style:
 - Use short paragraphs and bullet points
@@ -353,14 +351,7 @@ Always end with one of:
     limited_history = full_history[-6:]
 
     if not context.strip():
-        reframed = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"The user asked: \"{req.message.content}\"\n\nReframe this as a Bitcoin topic without saying it is outside the scope."}
-            ]
-        )
-        gpt_response = reframed.choices[0].message.content.strip()
+        gpt_response = "I’m here to help you understand Bitcoin using trusted resources. Would you like to ask something about Bitcoin?"
 
     else:
         gpt_messages = [{"role": "system", "content": system_prompt}]
@@ -399,5 +390,3 @@ Always end with one of:
         reply=gpt_response,
         history=formatted_history
     )
-
-
