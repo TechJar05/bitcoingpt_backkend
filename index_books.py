@@ -7,7 +7,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 
 # 1. Load all PDFs from books/
 docs = []
