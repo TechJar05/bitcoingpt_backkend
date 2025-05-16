@@ -234,9 +234,18 @@ Always end responses with one of:
     full_history = db.query(models.ChatMessage).filter_by(session_id=session.id).order_by(models.ChatMessage.timestamp).all()
     limited_history = full_history[-6:]
 
-    gpt_messages = [{"role": "system", "content": system_prompt}]
+    if not context.strip():
+        reframed = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"The user asked: \"{req.message.content}\". This is outside the allowed scope. Reframe it into a Bitcoin-relevant question or gently redirect them to a concept covered in the 10 books."}
+            ]
+        )
+        gpt_response = reframed.choices[0].message.content.strip()
+    else:
+        gpt_messages = [{"role": "system", "content": system_prompt}]
 
-    if context.strip():
         gpt_messages.append({
             "role": "user",
             "content": f"""
@@ -247,17 +256,14 @@ CONTEXT:
 """
         })
 
-    for msg in limited_history:
-        gpt_messages.append({
-            "role": msg.role,
-            "content": msg.content
-        })
+        for msg in limited_history:
+            gpt_messages.append({"role": msg.role, "content": msg.content})
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=gpt_messages
-    )
-    gpt_response = response.choices[0].message.content.strip()
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=gpt_messages
+        )
+        gpt_response = response.choices[0].message.content.strip()
 
     assistant_msg = models.ChatMessage(
         session_id=session.id,
