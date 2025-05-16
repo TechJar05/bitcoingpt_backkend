@@ -236,12 +236,25 @@ Always end responses with one of:
 
     if not context.strip():
         reframed = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"The user asked: \"{req.message.content}\". This is outside the allowed scope. Reframe it into a Bitcoin-relevant question or gently redirect them to a concept covered in the 10 books."}
-            ]
-        )
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"""
+The following user question is outside the allowed scope of Bitcoin education:
+\"\"\"{req.message.content}\"\"\"
+
+Do NOT answer the question directly.
+
+✅ Instead, respond with:
+1. A polite and friendly redirection to a relevant Bitcoin concept (covered in the 10 books).
+2. Offer a reframed question that *is* in scope.
+3. End with: “Would you like to explore this instead?”
+
+DO NOT mention Nepal, politics, or unrelated content.
+"""}
+    ]
+)
+
         gpt_response = reframed.choices[0].message.content.strip()
     else:
         gpt_messages = [{"role": "system", "content": system_prompt}]
