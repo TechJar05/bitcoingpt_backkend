@@ -235,35 +235,35 @@ Always end responses with one of:
     limited_history = full_history[-6:]
 
     if not context.strip():
-    reframed = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    system_prompt.strip()
-                    + "\n\n"
-                    + "IMPORTANT: The user prompt is outside the allowed topic of Bitcoin. You must redirect them."
-                )
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"The user asked: \"{req.message.content}\"\n\n"
-                    "This question is NOT related to Bitcoin or blockchain. "
-                    "Do not answer it directly.\n\n"
-                    "Instead, respond like this:\n"
-                    "- Politely say it's outside the scope\n"
-                    "- Suggest a related Bitcoin topic\n"
-                    "- Offer a better question they can ask\n"
-                    "- End with: 'Would you like to explore this instead?'\n\n"
-                    "DO NOT talk about unrelated countries, governments, or products. "
-                    "Do not answer as if you are a travel guide or news reporter."
-                )
-            }
-        ]
-    )
-    gpt_response = reframed.choices[0].message.content.strip()
+        reframed = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        system_prompt.strip()
+                        + "\n\n"
+                        + "IMPORTANT: The user prompt is outside the allowed topic of Bitcoin. You must redirect them."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"The user asked: \"{req.message.content}\"\n\n"
+                        "This question is NOT related to Bitcoin or blockchain. "
+                        "Do not answer it directly.\n\n"
+                        "Instead, respond like this:\n"
+                        "- Politely say it's outside the scope\n"
+                        "- Suggest a related Bitcoin topic\n"
+                        "- Offer a better question they can ask\n"
+                        "- End with: 'Would you like to explore this instead?'\n\n"
+                        "DO NOT talk about unrelated countries, governments, or products. "
+                        "Do not answer as if you are a travel guide or news reporter."
+                    )
+                }
+            ]
+        )
+        gpt_response = reframed.choices[0].message.content.strip()
 
     else:
         gpt_messages = [{"role": "system", "content": system_prompt}]
