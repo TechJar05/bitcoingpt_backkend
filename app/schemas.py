@@ -19,3 +19,5 @@ class ChatResponse(BaseModel):
     session_id: str
     reply: str
     history: List[MessageOut]
+    video_url: Optional[str] = None
+
