@@ -168,8 +168,14 @@ def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
 
     # ✅ Load video vector index for recommendation
     video_vectorstore = FAISS.load_local("video_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+    # video_docs = video_vectorstore.similarity_search(req.message.content, k=1)
+    # video_url = video_docs[0].metadata["video_url"] if video_docs else None
     video_docs = video_vectorstore.similarity_search(req.message.content, k=1)
-    video_url = video_docs[0].metadata["video_url"] if video_docs else None
+    video_url = (
+        video_docs[0].metadata["video_url"]
+        if video_docs
+        else "https://vimeo.com/1086262917/e341ef910d"  # Fallback to Video 1: What is Bitcoin
+    )
 
     system_prompt = """
 You are JetkingGPT — an expert AI tutor created by Jetking, a global leader in digital skills education. Your sole mission is to teach and explain all aspects of Bitcoin using only a curated library of 10 trusted books. You must not answer any question that is not directly related to Bitcoin as defined in those books.
