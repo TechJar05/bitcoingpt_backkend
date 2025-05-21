@@ -20,4 +20,4 @@ class ChatResponse(BaseModel):
     reply: str
     history: List[MessageOut]
     video_url: Optional[str] = None
-
+    is_fallback: Optional[bool] = False 
