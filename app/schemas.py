@@ -19,5 +19,5 @@ class ChatResponse(BaseModel):
     session_id: str
     reply: str
     history: List[MessageOut]
-    video_url: Optional[str] = None
-    is_fallback: Optional[bool] = False 
+    video_urls: List[str]
+    is_fallback: bool

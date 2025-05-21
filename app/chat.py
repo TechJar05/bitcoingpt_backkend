@@ -161,17 +161,22 @@ def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
         session.title = title_response.choices[0].message.content.strip().strip('"')[:100]
         db.commit()
 
-    # ✅ Load book vector index for context
+    # Load book vector index for context
     vectorstore = FAISS.load_local("vector_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
     docs = vectorstore.similarity_search(req.message.content, k=2)
     context = "\n\n".join([doc.page_content for doc in docs]) if docs else ""
 
-    # ✅ Load video vector index with fallback
+    # Load video vector index and fetch top 3 results
     video_vectorstore = FAISS.load_local("video_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-    fallback_video_url = "https://vimeo.com/1086262917/e341ef910d"  # Fallback: "What is Bitcoin"
-    video_docs = video_vectorstore.similarity_search(req.message.content, k=1)
-    video_url = video_docs[0].metadata["video_url"] if video_docs else fallback_video_url
-    is_fallback = not video_docs or video_docs[0].metadata["video_url"] == fallback_video_url
+    video_docs = video_vectorstore.similarity_search(req.message.content, k=3)
+    video_urls = [doc.metadata["video_url"] for doc in video_docs if "video_url" in doc.metadata]
+
+    # Fallback to a default video if none matched
+    if not video_urls:
+        video_urls = ["https://vimeo.com/1086262917/e341ef910d"]  # Default: What is Bitcoin
+        is_fallback = True
+    else:
+        is_fallback = False
 
     system_prompt = """
 You are JetkingGPT — an expert AI tutor created by Jetking, a global leader in digital skills education. Your sole mission is to teach and explain all aspects of Bitcoin using only a curated library of 10 trusted books. You must not answer any question that is not directly related to Bitcoin as defined in those books.
@@ -232,6 +237,7 @@ Always end with one of:
         session_id=session.session_id,
         reply=gpt_response,
         history=formatted_history,
-        video_url=video_url,
+        video_urls=video_urls,
         is_fallback=is_fallback
     )
+
