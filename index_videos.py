@@ -24,7 +24,7 @@ video_metadata = [
         "metadata": {
             "book": "Mastering Bitcoin",
             "topic": "Mining",
-            "video_url": "https://youtu.be/9mNgeTA13Gc?si=lEYmJiNUpr4jfraL"
+            "video_url": "https://vimeo.com/1086262917/e341ef910d"
         }
     },
     {
@@ -32,7 +32,7 @@ video_metadata = [
         "metadata": {
             "book": "Mastering Bitcoin",
             "topic": "Wallets",
-            "video_url": "https://youtu.be/izvgAmbWPyE?si=Vf9DIq2OjKHKGZXb"
+            "video_url": "https://vimeo.com/1086262967/15a8162cae"
         }
     },
     {
@@ -40,7 +40,7 @@ video_metadata = [
         "metadata": {
             "book": "The Bitcoin Standard",
             "topic": "Inflation & currency devaluation",
-            "video_url": "https://youtube.com/shorts/eVu_J7oHKgM?si=sEik4qvHuAo1Cq6H"
+            "video_url": "https://vimeo.com/1086262967/15a8162cae"
         }
     },
     {
@@ -48,7 +48,7 @@ video_metadata = [
         "metadata": {
             "book": "The Book of Satoshi",
             "topic": "Satoshi's vision",
-            "video_url": "https://youtube.com/shorts/WIHiQ-QwJko?si=Huj4UK_4c8Ld30UT"
+            "video_url": "https://vimeo.com/1086263163/9146ea5567"
         }
     }
     # ➕ Add more entries like this per video
