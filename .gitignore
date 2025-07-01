@@ -1,3 +1,59 @@
 venv/
 books/
 .env
+
+# Bytecode and Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+*.env
+
+# Alembic migration logs (keep migration scripts, ignore cache)
+alembic/versions/__pycache__/
+alembic/__pycache__/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE settings
+.vscode/
+.idea/
+*.swp
+
+# Log and temp files
+*.log
+*.bak
+*.tmp
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# MyPy, Pylint, etc.
+.mypy_cache/
+.pylint.d/
+
+# Compiled files
+build/
+dist/
+*.egg-info/
+
+# Database dumps or local DB files (if any)
+*.sqlite3
+*.db
+
+# SSH key files (just in case)
+*.pem
+*.pub
