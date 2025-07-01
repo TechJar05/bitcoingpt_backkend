@@ -22,3 +22,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# uvicorn app.main:app --reload
