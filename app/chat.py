@@ -388,7 +388,7 @@ def score_context_relevance(context: str, query: str) -> float:
 def generate_contextual_response(relevance: str, context: str, query: str, is_regulation: bool) -> str:
     """Generate appropriate system prompt based on relevance level"""
     
-    base_prompt = """You are JetkingGPT — an expert Bitcoin education assistant created by Jetking, a leader in digital skills education."""
+    base_prompt = """You are JetkingGPT — an expert Bitcoin education assistant created by Jetking, a leader in digital skills education.- Do not use emojis or emoticons in your answers."""
     
     if relevance == "relevant":
         if is_regulation:
@@ -397,6 +397,7 @@ def generate_contextual_response(relevance: str, context: str, query: str, is_re
 You specialize in Bitcoin and cryptocurrency topics. For regulation questions, use the provided live data and clearly state it's current information.
 
 Teaching Style:
+- Do not use emojis or emoticons in your answers.
 - Clear, educational explanations
 - Use bullet points for complex topics
 - Provide practical examples
