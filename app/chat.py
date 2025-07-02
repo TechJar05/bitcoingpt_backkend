@@ -313,31 +313,44 @@ def fetch_live_regulation_info(query: str) -> str:
         print(f"Live data fetch error: {e}")
         return "Unable to fetch live regulation data. Please check official sources."
 
-# ✅ Enhanced YouTube video fetching with relevance-based queries
-def fetch_youtube_videos(query: str, relevance: str = "relevant", max_results: int = 2) -> List[Dict[str, str]]:
-    """Fetch relevant YouTube videos with Bitcoin context for partial queries"""
+def fetch_youtube_videos(query: str, relevance: str = "relevant", context: str = "", max_results: int = 2) -> List[Dict[str, str]]:
+    """Fetch YouTube videos using dynamic keyword expansion for partial prompts."""
     if not serp_api_key:
         return []
-    
+
     try:
-        # Create enhanced query based on relevance level
-        if relevance == "relevant":
-            # For Bitcoin-related queries, enhance with educational keywords
-            enhanced_query = f"Bitcoin {query} tutorial explanation"
-        elif relevance == "partial":
-            # For partial queries, append Bitcoin/crypto keywords to bridge the topic
-            bitcoin_keywords = ["Bitcoin", "cryptocurrency", "crypto", "blockchain"]
-            enhanced_query = f"{query} {' '.join(bitcoin_keywords)} explained"
+        # Step 1: Extract key terms using GPT if partial
+        if relevance == "partial":
+            prompt = f"""
+You're helping improve YouTube search results for educational purposes.
+
+Given this user question:
+"{query}"
+
+And the educational context (about Bitcoin, crypto, and blockchain):
+"{context[:1000]}"  # limit tokens
+
+List 3–5 related keywords or short phrases that link the question to Bitcoin/crypto concepts. Separate them by commas.
+"""
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=30,
+                temperature=0.3
+            )
+            extracted = response.choices[0].message.content.strip()
+            keywords = ", ".join([kw.strip() for kw in extracted.split(",") if kw.strip()])
+            search_query = f"{query} {keywords}"
         else:
-            # Fallback (shouldn't reach here for irrelevant)
-            enhanced_query = f"Bitcoin {query}"
-        
+            search_query = f"Bitcoin {query} tutorial explanation"
+
+        # Step 2: Run SerpAPI YouTube search
         params = {
             "engine": "youtube",
-            "search_query": enhanced_query,
+            "search_query": search_query,
             "api_key": serp_api_key,
         }
-        
+
         search = GoogleSearch(params)
         results = search.get_dict()
 
@@ -348,10 +361,13 @@ def fetch_youtube_videos(query: str, relevance: str = "relevant", max_results: i
                     "title": video["title"],
                     "url": video["link"]
                 })
+
         return videos
     except Exception as e:
         print(f"YouTube fetch error: {e}")
         return []
+
+
 
 # ✅ Context relevance scoring
 def score_context_relevance(context: str, query: str) -> float:
@@ -530,7 +546,8 @@ Please ask a question related to Bitcoin or cryptocurrency topics!""",
     # ✅ Fetch additional resources based on relevance
     youtube_links = []
     if relevance in ["relevant", "partial"]:  # Fetch YouTube for both relevant and partial
-        youtube_links = fetch_youtube_videos(req.message.content, relevance)
+        youtube_links = fetch_youtube_videos(req.message.content, relevance, context)
+
 
     # ✅ Check for regulation query
     is_regulation = is_regulation_query(req.message.content)
