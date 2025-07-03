@@ -1,188 +1,3 @@
-# from fastapi import APIRouter, Depends
-# from sqlalchemy.orm import Session
-# from uuid import uuid4
-# from . import models, schemas
-# from .database import SessionLocal
-
-# from langchain_community.vectorstores import FAISS
-# from langchain_openai import OpenAIEmbeddings
-# from openai import OpenAI
-# from serpapi import GoogleSearch
-# import os
-# import re
-
-# router = APIRouter()
-# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-# serp_api_key = os.getenv("SERPAPI_API_KEY")
-
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
-# # ✅ Detect regulation questions
-# def is_regulation_query(text):
-#     keywords = ["regulation", "legal", "illegal", "ban", "banned", "government", "allowed", "prohibited", "policy", "law", "act", "rules"]
-#     return any(re.search(rf"\b{word}\b", text.lower()) for word in keywords)
-
-# # ✅ Get live info for regulation-related queries
-# def fetch_live_regulation_info(query):
-#     params = {
-#         "q": query,
-#         "api_key": serp_api_key,
-#         "gl": "in",
-#     }
-#     search = GoogleSearch(params)
-#     results = search.get_dict()
-#     snippets = []
-
-#     for result in results.get("organic_results", []):
-#         if "snippet" in result:
-#             snippets.append(result["snippet"])
-#         if len(snippets) >= 3:
-#             break
-
-#     return "\n\n".join(snippets) if snippets else "No live data found. Please check an official source."
-
-# # ✅ Fetch YouTube videos via SerpAPI
-# def fetch_youtube_videos(query, max_results=2):
-#     params = {
-#         "engine": "youtube",
-#         "search_query": query,
-#         "api_key": serp_api_key,
-#     }
-#     search = GoogleSearch(params)
-#     results = search.get_dict()
-
-#     videos = []
-#     for video in results.get("video_results", [])[:max_results]:
-#         if "link" in video and "title" in video:
-#             videos.append({
-#                 "title": video["title"],
-#                 "url": video["link"]
-#             })
-#     return videos
-
-# @router.post("/chat/", response_model=schemas.ChatResponse)
-# def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
-#     if req.session_id:
-#         session = db.query(models.ChatSession).filter_by(session_id=req.session_id).first()
-#     else:
-#         session = models.ChatSession(session_id=str(uuid4()))
-#         db.add(session)
-#         db.commit()
-#         db.refresh(session)
-
-#     # Save user message
-#     user_msg = models.ChatMessage(
-#         session_id=session.id,
-#         role="user",
-#         content=req.message.content
-#     )
-#     db.add(user_msg)
-#     db.commit()
-
-#     # Auto-generate topic title if not already set
-#     if session.title is None:
-#         title_prompt = f"Generate a short, clear topic title (4–6 words) for this message:\n\n\"{req.message.content}\""
-#         title_response = client.chat.completions.create(
-#             model="gpt-3.5-turbo",
-#             messages=[{"role": "user", "content": title_prompt}]
-#         )
-#         session.title = title_response.choices[0].message.content.strip().strip('"')[:100]
-#         db.commit()
-
-#     # Load book context vectorstore
-#     vectorstore = FAISS.load_local("vector_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-#     docs = vectorstore.similarity_search(req.message.content, k=2)
-#     context = "\n\n".join([doc.page_content for doc in docs]) if docs else ""
-
-#     # Load video vector index
-#     video_vectorstore = FAISS.load_local("video_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-#     fallback_video_url = "https://vimeo.com/1086262917/e341ef910d"
-#     video_docs = video_vectorstore.similarity_search(req.message.content, k=1)
-#     video_url = video_docs[0].metadata["video_url"] if video_docs else fallback_video_url
-#     is_fallback = not video_docs or video_docs[0].metadata["video_url"] == fallback_video_url
-
-#     # ✅ Fetch relevant YouTube videos
-#     youtube_links = fetch_youtube_videos(req.message.content)
-
-#     # System prompt for GPT
-#     system_prompt = """
-# You are JetkingGPT — an expert AI tutor created by Jetking, a global leader in digital skills education. You explain all aspects of Bitcoin using 10 trusted books. If the topic is Bitcoin regulation, use real-time sources. For all other topics, respond using the 10 books only.
-
-# Teaching Style:
-# - Clear short paragraphs
-# - Bullet points where useful
-# - Analogies, examples, definitions
-# - Tailored by user level (beginner, teen, expert)
-# """
-
-#     # Recent chat history
-#     full_history = db.query(models.ChatMessage).filter_by(session_id=session.id).order_by(models.ChatMessage.timestamp).all()
-#     limited_history = full_history[-6:]
-
-#     # Compose GPT prompt
-#     if is_regulation_query(req.message.content):
-#         live_data = fetch_live_regulation_info(req.message.content)
-#         final_prompt = f"""The user asked: "{req.message.content}"
-
-# Use the live data below to answer in a student-friendly tone. Clarify it's real-time info.
-
-# LIVE DATA:
-# {live_data}
-
-# Answer:"""
-#     else:
-#         final_prompt = f"""
-# Use the context below (from Jetking’s Bitcoin books) to answer the user's question. Do not mention book titles.
-
-# CONTEXT:
-# {context}
-
-# QUESTION:
-# {req.message.content}
-# """
-
-#     gpt_messages = [{"role": "system", "content": system_prompt}]
-#     for msg in limited_history:
-#         gpt_messages.append({"role": msg.role, "content": msg.content})
-#     gpt_messages.append({"role": "user", "content": final_prompt})
-
-#     response = client.chat.completions.create(
-#         model="gpt-3.5-turbo",
-#         messages=gpt_messages
-#     )
-#     gpt_response = response.choices[0].message.content.strip()
-
-#     # Save assistant response
-#     assistant_msg = models.ChatMessage(
-#         session_id=session.id,
-#         role="assistant",
-#         content=gpt_response
-#     )
-#     db.add(assistant_msg)
-#     db.commit()
-
-#     formatted_history = [
-#         schemas.MessageOut(role=m.role, content=m.content, timestamp=m.timestamp)
-#         for m in full_history
-#     ] + [
-#         schemas.MessageOut(role="assistant", content=gpt_response, timestamp=assistant_msg.timestamp)
-#     ]
-
-#     return schemas.ChatResponse(
-#         session_id=session.session_id,
-#         reply=gpt_response,
-#         history=formatted_history,
-#         video_url=video_url,
-#         is_fallback=is_fallback,
-#         youtube_links=youtube_links  # ✅ New YouTube titles + links
-#     )
-
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from uuid import uuid4
@@ -387,44 +202,52 @@ def score_context_relevance(context: str, query: str) -> float:
 # ✅ Enhanced response generation based on relevance
 def generate_contextual_response(relevance: str, context: str, query: str, is_regulation: bool) -> str:
     """Generate appropriate system prompt based on relevance level"""
-    
-    base_prompt = """You are JetkingGPT — an expert Bitcoin education assistant created by Jetking, a leader in digital skills education.- Do not use emojis or emoticons in your answers."""
-    
+
+    base_prompt = """You are JetkingGPT — an expert Bitcoin education assistant created by Jetking, a leader in digital skills education.
+
+Formatting Rules:
+- Use Byte-Sized Learning: keep answers brief and digestible
+- Avoid emojis or emoticons
+- Use short paragraphs (2–3 lines max)
+- Use bullet points where helpful
+- Simplify complex ideas using examples and analogies
+"""
+
     if relevance == "relevant":
         if is_regulation:
             return f"""{base_prompt}
 
-You specialize in Bitcoin and cryptocurrency topics. For regulation questions, use the provided live data and clearly state it's current information.
+You specialize in Bitcoin and cryptocurrency topics. For regulation questions, combine your trained knowledge with the live data provided. Make it clear when data is real-time.
 
-Teaching Style:
-- Do not use emojis or emoticons in your answers.
-- Clear, educational explanations
-- Use bullet points for complex topics
-- Provide practical examples
-- Acknowledge when information is time-sensitive"""
+Style Guidelines:
+- Focus on practical implications of the regulation
+- Break down legal language simply
+- Clarify if rules differ by region
+"""
         else:
             return f"""{base_prompt}
 
-You answer Bitcoin questions using Jetking's comprehensive Bitcoin curriculum. Stay focused on Bitcoin, cryptocurrency, and blockchain topics.
+You answer Bitcoin questions using Jetking's 10-book training. Stay focused on Bitcoin, cryptocurrency, and blockchain concepts.
 
-Teaching Style:
-- Clear explanations with examples
-- Break down complex concepts
-- Use analogies when helpful
-- Encourage further learning"""
+Style Guidelines:
+- Define key terms simply
+- Prioritize clarity over depth when in doubt
+- Engage the user like a tutor would in a classroom
+"""
     
     elif relevance == "partial":
         return f"""{base_prompt}
 
-The user's question is related to finance/economics. Connect your response to Bitcoin concepts when possible, but acknowledge the broader context.
+The user’s question is finance-related. Your job is to draw meaningful connections to Bitcoin where appropriate.
 
-Guidelines:
-- Bridge the topic to Bitcoin naturally
-- Explain Bitcoin's role in the broader context
-- Don't force connections that don't make sense
-- Be educational and helpful"""
-    
-    return ""  # Should not reach here for irrelevant queries
+Style Guidelines:
+- Don’t force a connection if it’s not useful
+- Explain Bitcoin’s relevance in the context
+- Guide the user to explore more specific Bitcoin topics if needed
+"""
+
+    return ""
+
 
 @router.post("/chat/", response_model=schemas.ChatResponse)
 def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
@@ -545,9 +368,50 @@ Please ask a question related to Bitcoin or cryptocurrency topics!""",
         is_fallback = True
 
     # ✅ Fetch additional resources based on relevance
+    # ✅ Intelligent video reuse
+    
+    import numpy as np
+
+    # ✅ YouTube video generation control based on prompt similarity
     youtube_links = []
-    if relevance in ["relevant", "partial"]:  # Fetch YouTube for both relevant and partial
+    should_generate_video = False
+    embedding_model = OpenAIEmbeddings()
+    new_prompt_embedding = embedding_model.embed_query(req.message.content)
+
+    # Compute cosine similarity with previous prompt embedding if exists
+    def cosine_similarity(vec1, vec2):
+        vec1, vec2 = np.array(vec1), np.array(vec2)
+        if np.linalg.norm(vec1) == 0 or np.linalg.norm(vec2) == 0:
+            return 0.0
+        return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+    similarity_score = 0.0
+    if session.last_prompt_embedding:
+        similarity_score = cosine_similarity(new_prompt_embedding, session.last_prompt_embedding)
+
+    # Threshold: if the prompt has changed enough, allow video regeneration
+    if relevance in ["relevant", "partial"]:
+        if similarity_score < 0.9:
+            should_generate_video = True
+
+    # Decide whether to reuse or fetch new
+    # Decide whether to reuse or fetch new
+    if session.saved_videos and not should_generate_video:
+        youtube_links = session.saved_videos
+        is_fallback = False
+    else:
         youtube_links = fetch_youtube_videos(req.message.content, relevance, context)
+        if youtube_links:
+            # Combine old + new, avoid duplicates
+            existing_links = session.saved_videos or []
+            new_unique_links = [v for v in youtube_links if v not in existing_links]
+
+            session.saved_videos = existing_links + new_unique_links
+            session.last_prompt_embedding = new_prompt_embedding
+            db.commit()
+
+
+
 
 
     # ✅ Check for regulation query
@@ -614,9 +478,30 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
             model="gpt-4o-mini",  # Better model for educational responses
             messages=gpt_messages,
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=700
         )
         gpt_response = response.choices[0].message.content.strip()
+        
+        # ✅ Generate follow-up question to keep user engaged
+        try:
+            followup_prompt = f"""
+        Given the user question: "{req.message.content}"
+
+        Suggest a simple follow-up question that builds on this topic to keep learning flowing. Keep it short and educational. Only return the follow-up question, no preamble.
+        """
+            followup_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": followup_prompt}],
+                max_tokens=50,
+                temperature=0.7
+            )
+            followup_question = followup_response.choices[0].message.content.strip()
+
+            # Append to main response
+            gpt_response += f"\n\n💡 **Want to go deeper?** {followup_question}"
+        except Exception as e:
+            print(f"Follow-up generation error: {e}")
+
         
         # Add context note for partial relevance with YouTube suggestion
         if relevance == "partial":

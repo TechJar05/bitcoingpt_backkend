@@ -30,17 +30,25 @@ def list_sessions(db: Session = Depends(get_db)):
     return output
 
 # ✅ Get full chat history by session ID
-@router.get("/sessions/{session_id}/", response_model=List[schemas.MessageOut])
+@router.get("/sessions/{session_id}/", response_model=schemas.SessionDetailOut)
 def get_session_messages(session_id: str, db: Session = Depends(get_db)):
     session = db.query(models.ChatSession).filter_by(session_id=session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
     messages = db.query(models.ChatMessage).filter_by(session_id=session.id).order_by(models.ChatMessage.timestamp).all()
-    return [
-        schemas.MessageOut(role=m.role, content=m.content, timestamp=m.timestamp)
-        for m in messages
-    ]
+
+    return schemas.SessionDetailOut(
+        session_id=session.session_id,
+        title=session.title,
+        created_at=session.created_at,
+        messages=[
+            schemas.MessageOut(role=m.role, content=m.content, timestamp=m.timestamp)
+            for m in messages
+        ],
+        saved_videos=session.saved_videos or []
+    )
+
 
 # ✅ Create a new empty session
 @router.post("/sessions/new", status_code=status.HTTP_201_CREATED)

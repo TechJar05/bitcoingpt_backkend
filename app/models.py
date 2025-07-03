@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
+from sqlalchemy import JSON
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
@@ -12,6 +13,9 @@ class ChatSession(Base):
 
     messages = relationship("ChatMessage", back_populates="session")
     title = Column(String, nullable=True) 
+    
+    saved_videos = Column(JSON, default=[])
+    last_prompt_embedding = Column(JSON, nullable=True)
 
 
 class ChatMessage(Base):
