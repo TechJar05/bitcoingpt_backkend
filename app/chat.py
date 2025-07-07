@@ -536,6 +536,7 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
 
     # Detect if user input is a follow-up (short, vague)
     if len(req.message.content.strip()) <= 6 and req.message.content.lower() in ["yes", "sure", "okay", "ok", "go on", "continue"]:
+
         # Find the most recent assistant message
         last_assistant_msg = next((m for m in reversed(full_history) if m.role == "assistant"), None)
         if last_assistant_msg:
