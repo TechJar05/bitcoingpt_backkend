@@ -527,17 +527,26 @@ Bitcoin context:
 
 Explain how Bitcoin fits into this broader financial concept, but don't force unnatural connections."""
 
-    # ✅ Prepare GPT messages
-    # ✅ Prepare GPT messages
+    
     # ✅ Prepare GPT messages with full chat history (like ChatGPT)
+    # Build GPT messages using full context
     gpt_messages = [{"role": "system", "content": system_prompt}]
-
-    # Include last 6–8 messages from the session
     for msg in limited_history:
         gpt_messages.append({"role": msg.role, "content": msg.content})
 
-    # 🧠 Add the current user message directly (supports prompt chaining like "yes", "tell me more")
-    gpt_messages.append({"role": "user", "content": req.message.content})
+    # Detect if user input is a follow-up (short, vague)
+    if len(req.message.content.strip()) <= 6 and req.message.content.lower() in ["yes", "sure", "okay", "ok", "go on", "continue"]:
+        # Find the most recent assistant message
+        last_assistant_msg = next((m for m in reversed(full_history) if m.role == "assistant"), None)
+        if last_assistant_msg:
+            gpt_messages.append({"role": "assistant", "content": last_assistant_msg.content})
+            gpt_messages.append({"role": "user", "content": req.message.content.strip()})
+        else:
+            # fallback if no assistant message
+            gpt_messages.append({"role": "user", "content": final_prompt})
+    else:
+        gpt_messages.append({"role": "user", "content": final_prompt})
+
 
 
 
