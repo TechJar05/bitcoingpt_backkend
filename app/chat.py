@@ -92,6 +92,33 @@ Respond with only one word: relevant, partial, or irrelevant
         print(f"Classification error: {e}")
         return "irrelevant"  # Fail safe
 
+def is_short_followup(prompt: str, previous_assistant_msg: str) -> bool:
+    """Use GPT to detect if the current prompt is a follow-up (like 'yes', 'how?', 'go on')"""
+    check_prompt = f"""
+You are an assistant that classifies user inputs.
+
+Given this previous assistant response:
+\"\"\"{previous_assistant_msg}\"\"\"
+
+And the user's reply:
+\"\"\"{prompt}\"\"\"
+
+Is the user reply a follow-up (e.g., 'yes', 'how?', 'okay', 'continue')? Respond with one word: yes or no
+"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": check_prompt}],
+            temperature=0,
+            max_tokens=2
+        )
+        return response.choices[0].message.content.strip().lower() == "yes"
+    except Exception as e:
+        print(f"Follow-up detection error: {e}")
+        return False
+
+
+
 # ✅ Improved live regulation info fetching
 def fetch_live_regulation_info(query: str) -> str:
     """Fetch live regulation information with better error handling"""
@@ -254,11 +281,29 @@ def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
     """Enhanced chat endpoint with better relevance handling"""
     
     # 🔍 Classify prompt relevance with validation
+    # ✅ Determine relevance, and detect if it's a follow-up continuation
+    session_obj = db.query(models.ChatSession).filter_by(session_id=req.session_id).first()
+    previous_msg = None
+    if session_obj:
+        previous_msg = (
+            db.query(models.ChatMessage)
+            .filter_by(session_id=session_obj.id, role="assistant")
+            .order_by(models.ChatMessage.timestamp.desc())
+            .first()
+        )
+
+
     try:
-        relevance = classify_prompt_relevance(req.message.content)
+        if previous_msg and is_short_followup(req.message.content, previous_msg.content):
+            relevance = "relevant"  # Treat follow-up as continuation
+            req.message.content = f"{previous_msg.content.strip()}\n\nUser's follow-up: {req.message.content.strip()}"
+            print("Follow-up detected — chaining context")
+        else:
+            relevance = classify_prompt_relevance(req.message.content)
     except Exception as e:
         print(f"Classification failed: {e}")
-        relevance = "irrelevant"  # Fail safe
+        relevance = "irrelevant"
+
     
     # ❌ Block irrelevant queries with helpful message
     if relevance == "irrelevant":
@@ -464,13 +509,18 @@ Bitcoin context:
 Explain how Bitcoin fits into this broader financial concept, but don't force unnatural connections."""
 
     # ✅ Prepare GPT messages
+    # ✅ Prepare GPT messages
+    # ✅ Prepare GPT messages with full chat history (like ChatGPT)
     gpt_messages = [{"role": "system", "content": system_prompt}]
-    
-    # Add conversation history
+
+    # Include last 6–8 messages from the session
     for msg in limited_history:
         gpt_messages.append({"role": msg.role, "content": msg.content})
-    
-    gpt_messages.append({"role": "user", "content": final_prompt})
+
+    # 🧠 Add the current user message directly (supports prompt chaining like "yes", "tell me more")
+    gpt_messages.append({"role": "user", "content": req.message.content})
+
+
 
     # ✅ Generate response with error handling
     try:
