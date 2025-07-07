@@ -323,7 +323,7 @@ def chat(req: schemas.ChatRequest, db: Session = Depends(get_db)):
     try:
         if previous_msg and is_short_followup(req.message.content, previous_msg.content):
             relevance = "relevant"  # Treat follow-up as continuation
-            req.message.content = f"{previous_msg.content.strip()}\n\nUser's follow-up: {req.message.content.strip()}"
+            # req.message.content = f"{previous_msg.content.strip()}\n\nUser's follow-up: {req.message.content.strip()}"
             print("Follow-up detected — chaining context")
         else:
             relevance = classify_prompt_relevance(req.message.content)
