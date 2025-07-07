@@ -23,6 +23,10 @@ def get_db():
     finally:
         db.close()
 
+
+def remove_emojis(text: str) -> str:
+    return re.sub(r'[^\w\s,.!?()\-–—:;"\'/]', '', text)
+
 # ✅ Enhanced regulation detection with more comprehensive keywords
 def is_regulation_query(text: str) -> bool:
     """Detect if the query is about Bitcoin/crypto regulations"""
@@ -548,7 +552,7 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
             followup_question = followup_response.choices[0].message.content.strip()
 
             # Append to main response
-            gpt_response += f"\n\n💡 **Want to go deeper?** {followup_question}"
+            gpt_response += f"\n\n{followup_question}"
         except Exception as e:
             print(f"Follow-up generation error: {e}")
 
