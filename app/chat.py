@@ -138,6 +138,14 @@ Is the user reply a follow-up (e.g., 'yes', 'how?', 'okay', 'continue')? Respond
 
 
 
+def is_follow_up_prompt(prompt: str) -> bool:
+    """Detect short follow-up prompts like 'yes', 'tell me more', etc."""
+    follow_ups = ["yes", "yeah", "sure", "ok", "okay", "go on", "continue", "next", "tell me more", "explain more", "more details", "please continue"]
+    prompt_clean = prompt.strip().lower()
+    return prompt_clean in follow_ups
+
+
+
 # ✅ Improved live regulation info fetching
 def fetch_live_regulation_info(query: str) -> str:
     """Fetch live regulation information with better error handling"""
