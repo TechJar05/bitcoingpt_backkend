@@ -570,7 +570,9 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
     except Exception as e:
         print(f"GPT response error: {e}")
         gpt_response = "I'm experiencing technical difficulties. Please try rephrasing your Bitcoin-related question."
-
+    
+    
+    gpt_response = remove_emojis(gpt_response)
     # ✅ Save assistant response
     try:
         assistant_msg = models.ChatMessage(
@@ -592,6 +594,7 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
         for m in full_history
     ]
 
+    
     return schemas.ChatResponse(
         session_id=session.session_id,
         reply=gpt_response,
