@@ -571,11 +571,37 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
         
         # ✅ Generate follow-up question to keep user engaged
         try:
-            followup_prompt = f"""
-        Given the user question: "{req.message.content}"
+            # Pull the latest assistant message (context to follow up from)
+            previous_assistant_msg = db.query(models.ChatMessage)\
+                .filter_by(session_id=session.id, role="assistant")\
+                .order_by(models.ChatMessage.timestamp.desc())\
+                .first()
 
-        Suggest a simple follow-up question that builds on this topic to keep learning flowing. Keep it short and educational. Only return the follow-up question, no preamble.
-        """
+            if previous_assistant_msg:
+                followup_prompt = f"""
+            You are an AI tutor.
+
+            The assistant just responded with:
+            \"\"\"{previous_assistant_msg.content}\"\"\"
+
+            Based on this, suggest a short, helpful educational follow-up question to keep the learning going. It should:
+            - Stay on topic
+            - Be phrased naturally
+            - Not mention the assistant
+            - NOT include emojis
+            - Return ONLY the follow-up question (no extra text)
+
+            Follow-up question:
+            """
+                followup_response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": followup_prompt}],
+                    max_tokens=50,
+                    temperature=0.7
+                )
+                followup_question = followup_response.choices[0].message.content.strip()
+                gpt_response += f"\n\n💡 {followup_question}"
+
             followup_response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": followup_prompt}],
