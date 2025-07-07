@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from uuid import uuid4
 from . import models, schemas
 from .database import SessionLocal
-
+            
+import random
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
@@ -564,9 +565,18 @@ Explain how Bitcoin fits into this broader financial concept, but don't force un
                 temperature=0.7
             )
             followup_question = followup_response.choices[0].message.content.strip()
+            
 
-            # Append to main response
-            gpt_response += f"\n\n{followup_question}"
+            leads = [
+                "**Follow-up to explore:**",
+                "**To deepen your understanding:**",
+                "**You might also explore:**",
+                "**Next question to consider:**"
+            ]
+            lead_in = random.choice(leads)
+            gpt_response += f"\n\n{lead_in} {followup_question}"
+
+            
         except Exception as e:
             print(f"Follow-up generation error: {e}")
 
